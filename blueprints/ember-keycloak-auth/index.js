@@ -17,7 +17,7 @@ module.exports = {
     this.ui.writeLine(chalk.green(`  adding keycloak-js package`));
 
     return this.addPackagesToProject([
-      {name: 'keycloak-js'}
+      {name: 'keycloak-js', target: '^26.2.0'}
     ]);
   },
 };
