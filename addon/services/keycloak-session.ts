@@ -1,25 +1,24 @@
 /*eslint no-undef: "error"*/
-import Service, {inject as service} from '@ember/service';
-import {KeycloakAdapterService} from '@jftechnology/ember-keycloak-auth';
+import Service, { inject as service } from "@ember/service";
+import { KeycloakAdapterService } from "@jftechnology/ember-keycloak-auth";
 
 import Keycloak, {
   KeycloakConfig,
   KeycloakError,
   KeycloakFlow,
   KeycloakInitOptions,
-  KeycloakInstance,
   KeycloakLoginOptions,
   KeycloakOnLoad,
   KeycloakProfile,
   KeycloakResponseMode,
-  KeycloakTokenParsed
-} from 'keycloak-js';
+  KeycloakTokenParsed,
+} from "keycloak-js";
 
-import RSVP from 'rsvp';
-import {computed, set} from '@ember/object';
+import RSVP from "rsvp";
+import { computed, set } from "@ember/object";
 import RouterService from "ember__routing/router-service";
 
-const {Promise} = RSVP;
+const { Promise } = RSVP;
 
 /**
  * Injectable Ember service that wraps an application wide Keycloak js instance.
@@ -27,8 +26,10 @@ const {Promise} = RSVP;
  * @class KeycloakSessionService
  * @public
  */
-export default class KeycloakSessionService extends Service implements KeycloakAdapterService {
-
+export default class KeycloakSessionService
+  extends Service
+  implements KeycloakAdapterService
+{
   /**
    * The injected Ember router service.
    *
@@ -38,7 +39,7 @@ export default class KeycloakSessionService extends Service implements KeycloakA
   @service
   router!: RouterService;
 
-  _keycloak?: KeycloakInstance<"native">;
+  _keycloak?: Keycloak;
 
   profile?: KeycloakProfile;
 
@@ -81,7 +82,7 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @property onLoad
    * @type {String}
    */
-  onLoad: KeycloakOnLoad = 'login-required';
+  onLoad: KeycloakOnLoad = "login-required";
 
   /**
    * Keycloak.init() option. Should be one of 'query' or 'fragment'. Default 'fragment'.
@@ -90,7 +91,7 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @property responseMode
    * @type {String}
    */
-  responseMode: KeycloakResponseMode = 'fragment';
+  responseMode: KeycloakResponseMode = "fragment";
 
   /**
    * Keycloak.init() option. Should be one of 'standard', 'implicit' or 'hybrid'. Default 'standard'.
@@ -99,7 +100,7 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @property flow
    * @type {String}
    */
-  flow: KeycloakFlow = 'standard';
+  flow: KeycloakFlow = "standard";
 
   /**
    * Keycloak.init() option. Default 'false'.
@@ -124,8 +125,8 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @type {String}
    */
   silentCheckSsoRedirectUri?: string;
-  
-    /**
+
+  /**
    * Keycloak.init() option.
    *
    * @property enableLogging
@@ -154,18 +155,16 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @param {*[]} parameters Constructor parameters for Keycloak object - see Keycloak JS adapter docs for details
    */
   installKeycloak(parameters: KeycloakConfig | string) {
-
     if (this.verbose) {
-      console.debug('KeycloakSessionService :: install');
+      console.debug("KeycloakSessionService :: install");
     }
 
-    let keycloak: KeycloakInstance<"native"> = Keycloak<"native">(parameters);
+    let keycloak: Keycloak = new Keycloak(parameters);
 
     this._installKeycloak(keycloak);
   }
 
-  _installKeycloak(keycloak: KeycloakInstance<"native">) {
-
+  _installKeycloak(keycloak: Keycloak) {
     keycloak.onReady = this.onReady;
     keycloak.onAuthSuccess = this.onAuthSuccess;
     keycloak.onAuthError = this.onAuthError;
@@ -174,11 +173,11 @@ export default class KeycloakSessionService extends Service implements KeycloakA
     keycloak.onTokenExpired = this.onTokenExpired;
     keycloak.onAuthLogout = this.onAuthLogout;
 
-    set(this, '_keycloak', keycloak);
-    set(this, 'timestamp', new Date());
+    set(this, "_keycloak", keycloak);
+    set(this, "timestamp", new Date());
 
     if (this.verbose) {
-      console.debug('KeycloakSessionService :: install :: completed');
+      console.debug("KeycloakSessionService :: install :: completed");
     }
   }
 
@@ -186,28 +185,33 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @method initKeycloak
    */
   initKeycloak(): Promise<any> | void {
-
     if (this.verbose) {
-      console.debug('KeycloakSessionService :: init');
+      console.debug("KeycloakSessionService :: init");
     }
 
-    let options: KeycloakInitOptions = this.getProperties('onLoad', 'responseMode', 'checkLoginIframe', 'checkLoginIframeInterval', 'flow', 'silentCheckSsoRedirectUri', 'enableLogging');
-
-    options.promiseType = "native";
+    let options: KeycloakInitOptions = this.getProperties(
+      "onLoad",
+      "responseMode",
+      "checkLoginIframe",
+      "checkLoginIframeInterval",
+      "flow",
+      "silentCheckSsoRedirectUri",
+      "enableLogging"
+    );
 
     if (this.keycloak) {
       let keycloak = this.keycloak;
       return new Promise((resolve, reject) => {
-        keycloak.init(options)
-          .then(
-            authenticated => {
-              console.info('KeycloakSessionService :: init complete');
-              resolve(authenticated);
-            },
-            reason => {
-              console.warn('KeycloakSessionService :: init failed');
-              reject(reason);
-            });
+        keycloak.init(options).then(
+          (authenticated) => {
+            console.info("KeycloakSessionService :: init complete");
+            resolve(authenticated);
+          },
+          (reason) => {
+            console.warn("KeycloakSessionService :: init failed");
+            reject(reason);
+          }
+        );
       });
     }
   }
@@ -218,8 +222,8 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @property keycloak
    * @type {Keycloak}
    */
-  @computed('_keycloak', 'timestamp')
-  get keycloak(): KeycloakInstance<"native"> | undefined {
+  @computed("_keycloak", "timestamp")
+  get keycloak(): Keycloak | undefined {
     return this._keycloak;
   }
 
@@ -269,9 +273,8 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @type {Object}
    */
   get headers(): {} {
-
     return {
-      'Authorization': `Bearer ${this.token}`
+      Authorization: `Bearer ${this.token}`,
     };
   }
 
@@ -299,7 +302,6 @@ export default class KeycloakSessionService extends Service implements KeycloakA
   }
 
   inRole(role: string, resource: string): boolean {
-
     if (role && resource) {
       return this.hasResourceRole(role, resource);
     }
@@ -318,19 +320,17 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @return {Promise} Wrapped promise.
    */
   updateToken(): RSVP.Promise<boolean> {
-
     return new RSVP.Promise((resolve, reject) => {
-
       if (this.keycloak) {
-        this.keycloak.updateToken(this.minValidity)
-          .then(
-            refreshed => {
-              resolve(refreshed);
-            },
-            () => {
-              console.debug('update token resolved as error');
-              reject(new Error('authentication token update failed'));
-            });
+        this.keycloak.updateToken(this.minValidity).then(
+          (refreshed) => {
+            resolve(refreshed);
+          },
+          () => {
+            console.debug("update token resolved as error");
+            reject(new Error("authentication token update failed"));
+          }
+        );
       } else {
         reject(new Error("No installed keycloak instance"));
       }
@@ -359,11 +359,12 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @private
    */
   _parseRedirectUrl() {
-
     // @ts-ignore
-    console.debug(`KeycloakSessionService :: _parseRedirectUrl :: ${window.location.origin} + ${this.router.rootURL} + ${this.router.currentURL}`);
+    console.debug(
+      `KeycloakSessionService :: _parseRedirectUrl :: ${window.location.origin} + ${this.router.rootURL} + ${this.router.currentURL}`
+    );
 
-    let redirect = '/';
+    let redirect = "/";
 
     // @ts-ignore
     if (this.router.rootURL) {
@@ -375,7 +376,8 @@ export default class KeycloakSessionService extends Service implements KeycloakA
       redirect = redirect + this.router.currentURL;
     }
 
-    redirect = window.location.origin + redirect.replace(new RegExp('//', 'g'), '/');
+    redirect =
+      window.location.origin + redirect.replace(new RegExp("//", "g"), "/");
 
     console.debug(`KeycloakSessionService :: _parseRedirectUrl :: ${redirect}`);
 
@@ -389,22 +391,22 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @return {RSVP.Promise} Resolves on server response
    */
   loadUserProfile(): RSVP.Promise<any> {
-
     return new RSVP.Promise((resolve, reject) => {
-
       if (this.keycloak) {
-        this.keycloak.loadUserProfile()
-          .then(
-            profile => {
-              console.debug(`Loaded profile for ${profile.id}`);
-              set(this, 'profile', profile);
-              resolve(profile);
-            },
-            error => {
-              reject(error);
-            });
+        this.keycloak.loadUserProfile().then(
+          (profile) => {
+            console.debug(`Loaded profile for ${profile.id}`);
+            set(this, "profile", profile);
+            resolve(profile);
+          },
+          (error) => {
+            reject(error);
+          }
+        );
       } else {
-        reject(new Error("KeycloakSessionService :: no installed keycloak instance"));
+        reject(
+          new Error("KeycloakSessionService :: no installed keycloak instance")
+        );
       }
     });
   }
@@ -417,29 +419,29 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @return {Promise} Resolves on server response
    */
   login(redirectUri: string): RSVP.Promise<any> {
-
-    let options: KeycloakLoginOptions = {redirectUri};
+    let options: KeycloakLoginOptions = { redirectUri };
 
     // Add idpHint to options, if it is populated
     if (this.idpHint) {
-      options.idpHint = this.get('idpHint');
+      options.idpHint = this.get("idpHint");
     }
 
     return new RSVP.Promise((resolve, reject) => {
-
       if (this.keycloak) {
-        this.keycloak.login(options)
-          .then(
-            () => {
-              console.debug('KeycloakSessionService :: login :: success');
-              resolve('login OK');
-            },
-            () => {
-              console.debug('KeycloakSessionService :: login error');
-              reject(new Error('login failed'));
-            });
+        this.keycloak.login(options).then(
+          () => {
+            console.debug("KeycloakSessionService :: login :: success");
+            resolve("login OK");
+          },
+          () => {
+            console.debug("KeycloakSessionService :: login error");
+            reject(new Error("login failed"));
+          }
+        );
       } else {
-        reject(new Error("KeycloakSessionService :: no installed keycloak instance"));
+        reject(
+          new Error("KeycloakSessionService :: no installed keycloak instance")
+        );
       }
     });
   }
@@ -452,43 +454,42 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @return {RSVP.Promise} Resolves on server response.
    */
   logout(redirectUri: string): RSVP.Promise<any> {
-
-    let options = {redirectUri};
+    let options = { redirectUri };
 
     return new RSVP.Promise((resolve, reject) => {
-
       if (this.keycloak) {
         let keycloak = this.keycloak;
-        keycloak.logout(options)
-          .then(
-            () => {
-              console.debug('KeycloakSessionService :: logout :: success');
-              keycloak.clearToken();
-              resolve('logout OK');
-            });
+        keycloak.logout(options).then(() => {
+          console.debug("KeycloakSessionService :: logout :: success");
+          keycloak.clearToken();
+          resolve("logout OK");
+        });
       } else {
-        reject(new Error("KeycloakSessionService :: no installed keycloak instance"));
+        reject(
+          new Error("KeycloakSessionService :: no installed keycloak instance")
+        );
       }
     });
   }
 
   wrappedCall(call: () => {}): RSVP.Promise<any> {
-
     return this.updateToken()
-      .then(result => {
+      .then((result) => {
         if (result && this.verbose) {
-          console.debug(`KeycloakSessionService :: token was refreshed prior to wrapped call`);
+          console.debug(
+            `KeycloakSessionService :: token was refreshed prior to wrapped call`
+          );
         }
         return true;
       })
-      .then(
-        call,
-        (reason: any) => {
-          console.warn(`KeycloakSessionService :: update token :: rejected :: ${reason}`);
-          let url = this._parseRedirectUrl();
-          this.login(url);
-          throw reason;
-        });
+      .then(call, (reason: any) => {
+        console.warn(
+          `KeycloakSessionService :: update token :: rejected :: ${reason}`
+        );
+        let url = this._parseRedirectUrl();
+        this.login(url);
+        throw reason;
+      });
   }
 
   /**
@@ -498,9 +499,9 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @type {Function}
    */
   onReady = (authenticated: boolean) => {
-    set(this, 'ready', true);
-    set(this, 'authenticated', authenticated);
-    set(this, 'timestamp', new Date());
+    set(this, "ready", true);
+    set(this, "authenticated", authenticated);
+    set(this, "timestamp", new Date());
     console.info(`KeycloakSessionService :: onReady -> ${authenticated}`);
   };
 
@@ -511,11 +512,13 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @type {Function}
    */
   onAuthSuccess = () => {
-    set(this, 'authenticated', true);
-    set(this, 'timestamp', new Date());
+    set(this, "authenticated", true);
+    set(this, "timestamp", new Date());
 
     if (this.verbose) {
-      console.debug(`KeycloakSessionService :: onAuthSuccess :: token -> ${this.token}`);
+      console.debug(
+        `KeycloakSessionService :: onAuthSuccess :: token -> ${this.token}`
+      );
     }
   };
 
@@ -526,10 +529,12 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @type {Function}
    */
   onAuthError = (errorData: KeycloakError) => {
-    set(this, 'authenticated', false);
-    set(this, 'timestamp', new Date());
+    set(this, "authenticated", false);
+    set(this, "timestamp", new Date());
 
-    console.warn(`KeycloakSessionService :: onAuthError :: error -> ${errorData.error}, description -> ${errorData.error_description}`);
+    console.warn(
+      `KeycloakSessionService :: onAuthError :: error -> ${errorData.error}, description -> ${errorData.error_description}`
+    );
   };
 
   /**
@@ -539,11 +544,13 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @type {Function}
    */
   onAuthRefreshSuccess = () => {
-    set(this, 'authenticated', true);
-    set(this, 'timestamp', new Date());
+    set(this, "authenticated", true);
+    set(this, "timestamp", new Date());
 
     if (this.verbose) {
-      console.debug(`KeycloakSessionService :: onAuthRefreshSuccess :: token -> ${this.token}`);
+      console.debug(
+        `KeycloakSessionService :: onAuthRefreshSuccess :: token -> ${this.token}`
+      );
     }
   };
 
@@ -554,10 +561,10 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @type {Function}
    */
   onAuthRefreshError = () => {
-    set(this, 'authenticated', false);
-    set(this, 'timestamp', new Date());
+    set(this, "authenticated", false);
+    set(this, "timestamp", new Date());
     this.clearToken();
-    console.warn('KeycloakSessionService :: onAuthRefreshError');
+    console.warn("KeycloakSessionService :: onAuthRefreshError");
   };
 
   /**
@@ -567,9 +574,9 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @type {Function}
    */
   onTokenExpired = () => {
-    set(this, 'authenticated', false);
-    set(this, 'timestamp', new Date());
-    console.info('KeycloakSessionService :: onTokenExpired');
+    set(this, "authenticated", false);
+    set(this, "timestamp", new Date());
+    console.info("KeycloakSessionService :: onTokenExpired");
   };
 
   /**
@@ -579,9 +586,8 @@ export default class KeycloakSessionService extends Service implements KeycloakA
    * @type {Function}
    */
   onAuthLogout = () => {
-    set(this, 'authenticated', false);
-    set(this, 'timestamp', new Date());
-    console.info('KeycloakSessionService :: onAuthLogout');
+    set(this, "authenticated", false);
+    set(this, "timestamp", new Date());
+    console.info("KeycloakSessionService :: onAuthLogout");
   };
 }
-
